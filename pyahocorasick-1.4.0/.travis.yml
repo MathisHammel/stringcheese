@@ -1,0 +1,15 @@
+language: c
+addons:
+    apt:
+        packages:
+        - python3
+        - python3-dev
+
+matrix:
+  include:
+    - compiler: gcc
+    - compiler: clang
+
+script:
+  - make
+
