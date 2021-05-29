@@ -35,8 +35,8 @@ def setup_parser():
                         'on larger files but you may miss matches',
                         action='store_true')
 
-    # parser.add_argument('-v', '--verbose', help='increase output verbosity',
-    #                    action='store_true')
+    parser.add_argument('-v', '--verbose', help='increase output verbosity',
+                        action='store_true')
 
     return parser
 
@@ -97,11 +97,18 @@ def b32_decoder(match):
 
 def crypt_rot13(message):
     cipher = ''
-    for letter in message.upper():
-        if chr(letter).isalpha():
-            num = (letter - 64 + 13) % 26
-            cipher += 'Z' if num == 0 else chr(num + 64)
-        else:
+    for letter in message:
+        if 64 < letter < 91:
+            if chr(letter).isalpha():
+                num = (letter - 64 + 13) % 26
+                cipher += 'Z' if num == 0 else chr(num + 64)
+        elif 96 < letter < 122:
+            if chr(letter).isalpha():
+                num = (letter - 96 + 13) % 26
+                cipher += 'z' if num == 0 else chr(num + 96)
+            else:
+                cipher += chr(letter)
+        else :
             cipher += chr(letter)
     return str.encode(cipher)
 
@@ -264,7 +271,7 @@ def generate_haystacks(base_haystack, fast):
     # TODO : add local xor for simple crackme challs? but may be slow
 
 
-def extract_matches(automaton, filename, fast):
+def extract_matches(automaton, filename, fast, verbose):
     if filename == '-':
         print('No filename provided, reading from stdin.')
         file_contents = sys.stdin.buffer.read()
@@ -302,12 +309,14 @@ def extract_matches(automaton, filename, fast):
                 raw_match = haystack[start_index:start_index+MAX_FLAG_LENGTH]
                 tqdm.write(f'MATCH FOUND! '
                            f'In {haystack_name}, using encoding {enc_desc}:')
-                # TODO : if verbose, print raw match (in hex?)
-                # tqdm.write(binascii.hexlify(raw_match).decode())
+                if verbose:
+                    tqdm.write(binascii.hexlify(raw_match).decode())
                 decoded_flag = decoder(raw_match)
                 # tqdm.write(binascii.hexlify(decoded_flag).decode())
                 processed_match = postprocess_match(decoded_flag)
                 tqdm.write(processed_match)
+                if fast:
+                    sys.exit(0)
 
         # Keep memory consumption low
         del haystack
@@ -325,8 +334,9 @@ def main():
     pattern = args.pattern.encode()
     filename = args.file
     fast_mode = args.fast
+    verbose_mode = args.verbose
     automaton = build_automaton(pattern)
-    extract_matches(automaton, filename, fast_mode)
+    extract_matches(automaton, filename, fast_mode, verbose_mode)
 
 
 if __name__ == '__main__':
