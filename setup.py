@@ -14,11 +14,10 @@ setup(
     author_email = 'e@e.e',
     license      = 'GPL2',
     packages     = ['stringcheese'],
+    entry_points = {
+        'console_scripts' : ['stringcheese=stringcheese.stringcheese:main']
+    },
     extras_require = { 'build': ['tqdm'] },
     zip_safe     = False
 )
 
-f = open('/bin/stringcheese','w')
-f.write('#!/bin/bash\npython3 -m stringcheese ${@}\n')
-f.close()
-os.system("chmod +x /bin/stringcheese")
