@@ -120,6 +120,20 @@ def binary_bytes_decoder(match):
     bin_converted = bytes(ord('0')+x for x in match)
     return bitstring_to_bytes(bin_converted)
 
+def b10_ascii_decoder(match):
+    decoded_ascii = ""
+    acc = bytearray()
+    for l in match:
+        if l < 48 or l > 57:
+            break  # as soon as match is not digits
+        acc.append(l)
+        cint = int(acc)
+        # wait to have a big enough number to convert to ascii
+        if cint >= 32:  # ascii code bellow 32 are not printable
+            decoded_ascii += chr(cint)
+            acc.clear()
+    return decoded_ascii.encode()
+
 def build_automaton(pattern):
     automaton = ahocorasick.Automaton()
 
@@ -145,6 +159,11 @@ def build_automaton(pattern):
         xor_decoder = lambda s, xorval=xorval: bytes(xorval^x for x in s)
         automaton.add_word(xor_pattern,
                            (xor_pattern, f'XOR_{xorval}', xor_decoder))
+
+    # base 10 ascii match
+    b10_ascii_pattern = ''.join(str(x) for x in pattern).encode()
+    automaton.add_word(b10_ascii_pattern,
+                       (b10_ascii_pattern, 'base10_ascii', b10_ascii_decoder))
 
     # hex match
     hex_pattern = binascii.hexlify(pattern)
