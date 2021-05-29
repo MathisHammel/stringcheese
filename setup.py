@@ -68,7 +68,7 @@ module = setuptools.Extension(
 
 setuptools.setup(
     name         = 'stringcheese',
-    version      = '1.1',
+    version      = '2.0',
     description  = 'StringCheese is a tool to get easy CTF flags automatically.',
     long_description = long_description,
     long_description_content_type = 'text/markdown',
