@@ -74,7 +74,7 @@ setuptools.setup(
     long_description_content_type = 'text/markdown',
     url          = 'https://github.com/MathisHammel/stringcheese',
     author       = 'MathisHammel',
-    author_email = 'e@e.e',
+    author_email = 'mathis@h25.io',
     license      = 'GPL2',
     ext_modules  = [module],
     packages     = ['stringcheese'],
