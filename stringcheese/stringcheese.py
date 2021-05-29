@@ -15,25 +15,25 @@ CLOSING_CHAR = b'}'
 
 
 def setup_parser():
-    parser = ArgumentParser(description='Find flags automatically in ' \
-                            'CTF challenges. This looks for flags ' \
-                            'in the provided files using searches similar ' \
-                            'to strings+grep, but works even if the flag is ' \
+    parser = ArgumentParser(description='Find flags automatically in '
+                            'CTF challenges. This looks for flags '
+                            'in the provided files using searches similar '
+                            'to strings+grep, but works even if the flag is '
                             'transformed, e.g. encoded or xor-encrypted.',
                             add_help=False)
 
-    parser.add_argument('--help', '-h', action='help', help='show this help ' \
+    parser.add_argument('--help', '-h', action='help', help='show this help '
                         'message and exit')
 
-    parser.add_argument('pattern', type=str, help='the pattern you want to ' \
+    parser.add_argument('pattern', type=str, help='the pattern you want to '
                         'search, e.g. FLAG{')
 
-    parser.add_argument('--file', '-f', type=str, help='the file in which '\
+    parser.add_argument('--file', '-f', type=str, help='the file in which '
                         'to search for flags, stdin by default', default='-')
 
-    # parser.add_argument('--fast', help='skip the slow checks. Useful '\
-    #                    'on larger files but you may miss matches',
-    #                    action='store_true')
+    parser.add_argument('--fast', help='skip the slow checks. Useful '
+                        'on larger files but you may miss matches',
+                        action='store_true')
 
     # parser.add_argument('-v', '--verbose', help='increase output verbosity',
     #                    action='store_true')
@@ -252,11 +252,10 @@ def postprocess_match(raw_match):
     return raw_match.decode()
 
 
-def generate_haystacks(base_haystack):
+def generate_haystacks(base_haystack, fast):
     yield base_haystack, 'stream'
-
-    # TODO : add fast mode, skip steps >8 or >4
-    for step in range(2, 33):
+    nb_steps = 33 if not fast else 8
+    for step in range(2, nb_steps):
         for startpos in range(step):
             yield base_haystack[startpos::step], f'stream[{startpos}::{step}]'
 
@@ -265,7 +264,7 @@ def generate_haystacks(base_haystack):
     # TODO : add local xor for simple crackme challs? but may be slow
 
 
-def extract_matches(automaton, filename):
+def extract_matches(automaton, filename, fast):
     if filename == '-':
         print('No filename provided, reading from stdin.')
         file_contents = sys.stdin.buffer.read()
@@ -276,8 +275,12 @@ def extract_matches(automaton, filename):
         except:
             print('Error opening file.')
             sys.exit(0)
+    if fast:
+        val = input("Warning, with --fast your files will be treated faster by ignoring some tests so you might miss "
+                    "some flags. Do you wish to continue? (y/N) : ")
+        if val != 'y':
+            sys.exit(0)
     if len(file_contents) > 50000:
-        print(len(file_contents))
         val = input("This is a large file and may take a long time to be treated, do you wish to continue? (y/N) : ")
         if val != 'y':
             sys.exit(0)
@@ -287,10 +290,10 @@ def extract_matches(automaton, filename):
     match_found = False
 
     # Compute the number of haystacks by counting them on a fake base
-    n_haystacks = sum(1 for _ in generate_haystacks(b'fake haystack'))
+    n_haystacks = sum(1 for _ in generate_haystacks(b'fake haystack', fast))
 
     progress = tqdm(total=n_haystacks)
-    for haystack, haystack_name in generate_haystacks(file_contents):
+    for haystack, haystack_name in generate_haystacks(file_contents, fast):
         match_iter = list(automaton.iter(haystack))
         if match_iter:
             for end_index, (pattern, enc_desc, decoder) in match_iter:
@@ -321,8 +324,9 @@ def main():
     args = argparser.parse_args()
     pattern = args.pattern.encode()
     filename = args.file
+    fast_mode = args.fast
     automaton = build_automaton(pattern)
-    extract_matches(automaton, filename)
+    extract_matches(automaton, filename, fast_mode)
 
 
 if __name__ == '__main__':
