@@ -13,6 +13,7 @@ from tqdm import tqdm
 MAX_FLAG_LENGTH = 2000
 CLOSING_CHAR = b'}'
 
+
 def setup_parser():
     parser = ArgumentParser(description='Find flags automatically in ' \
                             'CTF challenges. This looks for flags ' \
@@ -30,11 +31,11 @@ def setup_parser():
     parser.add_argument('--file', '-f', type=str, help='the file in which '\
                         'to search for flags, stdin by default', default='-')
 
-    #parser.add_argument('--fast', help='skip the slow checks. Useful '\
+    # parser.add_argument('--fast', help='skip the slow checks. Useful '\
     #                    'on larger files but you may miss matches',
     #                    action='store_true')
 
-    #parser.add_argument('-v', '--verbose', help='increase output verbosity',
+    # parser.add_argument('-v', '--verbose', help='increase output verbosity',
     #                    action='store_true')
 
     return parser
@@ -68,6 +69,53 @@ def b64_decoder(match):
 
     return None # All decodes failed
 
+
+def b32_decoder(match):
+    try:
+        # If padding is present, b32decode ignores leftover data and works
+        return base64.b32decode(match)
+    except:
+        pass
+
+    # Try to find a decodeable base32 string by trimming progressively
+    for trim_len in range(len(match), -1, -1):
+        if trim_len % 8 == 1:
+            continue # b32 is not compatible with this data length
+        trim_match = match[:trim_len]
+
+        # Add correct padding
+        while len(trim_match) % 8:
+            trim_match += b'='
+
+        try:
+            return base64.b32decode(trim_match)
+        except:
+            pass  # Decode failed. Ignore
+
+    return None  # All decodes failed
+
+
+def crypt_rot13(message):
+    cipher = ''
+    for letter in message.upper():
+        if chr(letter).isalpha():
+            num = (letter - 64 + 13) % 26
+            cipher += 'Z' if num == 0 else chr(num + 64)
+        else:
+            cipher += chr(letter)
+    return str.encode(cipher)
+
+
+def crypt_rot47(message):
+    cipher = ''
+    for letter in message:
+        if 126 >= letter >= 33:
+            cipher += chr(33 + ((letter + 14) % 94))
+        else:
+            cipher += chr(message[letter])
+    return str.encode(cipher)
+
+
 def codec_decoder_generator(codec):
     def codec_decoder(match):
         while match:
@@ -79,6 +127,7 @@ def codec_decoder_generator(codec):
         return None
     return codec_decoder
 
+
 def hex_decoder(match):
     # Ensure all bytes in the match are hex
     for i in range(len(match)):
@@ -89,6 +138,7 @@ def hex_decoder(match):
         match = match[:-1]
     return binascii.unhexlify(match)
 
+
 def hex_bytes_decoder(match):
     for i in range(len(match)):
         if match[i] > 0xf:
@@ -98,8 +148,10 @@ def hex_bytes_decoder(match):
         match = match[:-1]
     return bytes(match[i] << 4 | match[i+1] for i in range(0, len(match), 2))
 
+
 def bitstring_to_bytes(bitstring):
     return int(bitstring, 2).to_bytes(len(bitstring) // 8, byteorder='big')
+
 
 def binary_decoder(match):
     for i in range(len(match)):
@@ -110,6 +162,7 @@ def binary_decoder(match):
         match = match[:-1]
     return bitstring_to_bytes(match)
 
+
 def binary_bytes_decoder(match):
     for i in range(len(match)):
         if match[i] > 1:
@@ -119,6 +172,7 @@ def binary_bytes_decoder(match):
         match = match[:-1]
     bin_converted = bytes(ord('0')+x for x in match)
     return bitstring_to_bytes(bin_converted)
+
 
 def build_automaton(pattern):
     automaton = Automaton()
@@ -132,9 +186,14 @@ def build_automaton(pattern):
         b64pattern = b64pattern[:-1]
     automaton.add_word(b64pattern, (b64pattern, 'base64', b64_decoder))
 
+    b32pattern = base64.b32encode(pattern).rstrip(b'=')
+    if len(b32pattern)%7:
+        b32pattern = b32pattern[:-1]
+    automaton.add_word(b32pattern, (b32pattern, 'base32', b32_decoder))
+
     # codec match
     for codec in ('utf-16', 'utf-16-be', 'utf-16-le',
-                'utf-32', 'utf-32-be', 'utf-32-le'):
+                  'utf-32', 'utf-32-be', 'utf-32-le'):
         codec_pattern = pattern.decode().encode(codec)
         codec_decoder = codec_decoder_generator(codec)
         automaton.add_word(codec_pattern, (codec_pattern, codec, codec_decoder))
@@ -159,15 +218,26 @@ def build_automaton(pattern):
     bin_pattern = ''.join(f'{pb:08b}' for pb in pattern).encode()
     automaton.add_word(bin_pattern, (bin_pattern, 'binary', binary_decoder))
 
+    # rot13 match
+    raw_rot13_pattern = crypt_rot13(pattern)
+    automaton.add_word(raw_rot13_pattern,
+                       (raw_rot13_pattern, 'raw_rot13', crypt_rot13))
+
+    # rot47 match
+    raw_rot47_pattern = crypt_rot47(pattern)
+    automaton.add_word(raw_rot47_pattern,
+                       (raw_rot47_pattern, 'raw_rot47', crypt_rot47))
+
     # raw binary match
     raw_bin_pattern = bytes(int(x) for x in bin_pattern)
     automaton.add_word(raw_bin_pattern,
                        (raw_bin_pattern, 'raw_binary', binary_bytes_decoder))
 
-    # TODO: base32, rot13, rot47, various ciphers, etc
+    # TODO: various ciphers, etc
 
     automaton.make_automaton()
     return automaton
+
 
 def postprocess_match(raw_match):
     # Return a printable prefix of the match, ending at } if found
@@ -180,6 +250,7 @@ def postprocess_match(raw_match):
         raw_match = raw_match.split(CLOSING_CHAR)[0] + CLOSING_CHAR
 
     return raw_match.decode()
+
 
 def generate_haystacks(base_haystack):
     yield base_haystack, 'stream'
@@ -204,8 +275,12 @@ def extract_matches(automaton, filename):
                 file_contents = haystack_file.read()
         except:
             print('Error opening file.')
-
-    # TODO : print file size warning (processing may take a long time)
+            sys.exit(0)
+    if len(file_contents) > 50000:
+        print(len(file_contents))
+        val = input("This is a large file and may take a long time to be treated, do you wish to continue? (y/N) : ")
+        if val != 'y':
+            sys.exit(0)
 
     # TODO : decode file formats (zip, png pixels, etc)
 
@@ -223,11 +298,11 @@ def extract_matches(automaton, filename):
                 start_index = end_index - len(pattern) + 1
                 raw_match = haystack[start_index:start_index+MAX_FLAG_LENGTH]
                 tqdm.write(f'MATCH FOUND! '
-                      f'In {haystack_name}, using encoding {enc_desc}:')
+                           f'In {haystack_name}, using encoding {enc_desc}:')
                 # TODO : if verbose, print raw match (in hex?)
-                #tqdm.write(binascii.hexlify(raw_match).decode())
+                # tqdm.write(binascii.hexlify(raw_match).decode())
                 decoded_flag = decoder(raw_match)
-                #tqdm.write(binascii.hexlify(decoded_flag).decode())
+                # tqdm.write(binascii.hexlify(decoded_flag).decode())
                 processed_match = postprocess_match(decoded_flag)
                 tqdm.write(processed_match)
 
@@ -248,6 +323,7 @@ def main():
     filename = args.file
     automaton = build_automaton(pattern)
     extract_matches(automaton, filename)
+
 
 if __name__ == '__main__':
     main()
