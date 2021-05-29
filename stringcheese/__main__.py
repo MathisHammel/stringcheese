@@ -241,10 +241,13 @@ def extract_matches(automaton, filename):
         print('No match found.')
 
 
-if __name__ == '__main__':
+def main():
     argparser = setup_parser()
     args = argparser.parse_args()
     pattern = args.pattern.encode()
     filename = args.file
     automaton = build_automaton(pattern)
     extract_matches(automaton, filename)
+
+if __name__ == '__main__':
+    main()
