@@ -5,3 +5,5 @@
 # Date created       :
 # Date last modified :
 # Python Version     : 3.*
+
+from .stringcheese import *
