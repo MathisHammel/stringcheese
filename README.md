@@ -1,6 +1,6 @@
 # StringCheese
 
-![StringCheese logo](./logo.png)
+![StringCheese logo](https://raw.githubusercontent.com/MathisHammel/stringcheese/main/logo.png)
 
 StringCheese is a script written in Python to extract CTF flags (or any other pattern with a prefix) automatically.
 
@@ -11,7 +11,7 @@ It works like a simple `strings | grep` command, but can detect many encodings (
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install StringCheese.
 
 ```bash
-pip install stringcheese
+sudo pip install stringcheese
 ```
 
 ## Usage
@@ -31,17 +31,13 @@ Those strings are then searched in several transformed version of the input file
 
 When the encoded flag prefix is found somewhere, the corresponding decoder is called to regenerate the flag.
 
-![how it works](./howitworks.png)
+![how it works](https://raw.githubusercontent.com/MathisHammel/stringcheese/main/howitworks.png)
 
-## Authors
-
-[Mathis HAMMEL](https://twitter.com/MathisHammel)
-
-Anso
-
-## Contributors
-
-[You ?](https://github.com/MathisHammel/stringcheese/pulls)
+## Authors and contributors
+- [Mathis HAMMEL](https://twitter.com/MathisHammel)
+- Anso
+- [Podalirius](https://twitter.com/podalirius_)
+- [You ?](https://github.com/MathisHammel/stringcheese/pulls)
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.

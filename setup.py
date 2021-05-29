@@ -13,7 +13,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     
 os.system("cd stringcheese/pyahocorasick-1.4.0/; python setup.py install")
 
-setup(
+setuptools.setup(
     name         = 'stringcheese',
     version      = '1.1',
     description  = 'StringCheese is a tool to get easy CTF flags automatically.',
@@ -21,11 +21,11 @@ setup(
     long_description_content_type = 'text/markdown',
     url          = 'https://github.com/MathisHammel/stringcheese',
     author       = 'MathisHammel',
-    author_email = 'e@e.e',
+    author_email = 'mathis@h25.io',
     license      = 'GPL2',
     packages     = ['stringcheese'],
     entry_points = {
-        'console_scripts' : ['stringcheese=stringcheese.stringcheese:main']
+        'console_scripts' : ['stringcheese=stringcheese.__main__:main']
     },
     install_requires = [
         'tqdm'

@@ -8,5 +8,8 @@ clean :
 
 build :
 	python setup.py sdist
+	
+testupload :
+	twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 upload :
-	python setup.py sdist upload
+	twine upload dist/*
