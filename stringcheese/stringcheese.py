@@ -4,7 +4,6 @@ import base64
 import binascii
 import gc
 import sys
-
 from argparse import ArgumentParser
 
 from stringcheese.ahocorasick import *
@@ -55,7 +54,7 @@ def b64_decoder(match):
     # Try to find a decodeable base64 string by trimming progressively
     for trim_len in range(len(match), -1, -1):
         if trim_len % 4 == 1:
-            continue # b64 is not compatible with this data length
+            continue  # b64 is not compatible with this data length
         trim_match = match[:trim_len]
 
         # Add correct padding
@@ -65,9 +64,9 @@ def b64_decoder(match):
         try:
             return base64.b64decode(trim_match)
         except:
-            pass # Decode failed. Ignore
+            pass  # Decode failed. Ignore
 
-    return None # All decodes failed
+    return None  # All decodes failed
 
 
 def b32_decoder(match):
@@ -80,7 +79,7 @@ def b32_decoder(match):
     # Try to find a decodeable base32 string by trimming progressively
     for trim_len in range(len(match), -1, -1):
         if trim_len % 8 == 1:
-            continue # b32 is not compatible with this data length
+            continue  # b32 is not compatible with this data length
         trim_match = match[:trim_len]
 
         # Add correct padding
@@ -96,27 +95,20 @@ def b32_decoder(match):
 
 
 def crypt_rot13(message):
-    cipher = ''
-    for letter in message:
-        if 64 < letter < 91:
-            num = (letter - 64 + 13) % 26
-            cipher += 'Z' if num == 0 else chr(num + 64)
-        elif 96 < letter < 122:
-            num = (letter - 96 + 13) % 26
-            cipher += 'z' if num == 0 else chr(num + 96)
-        else:
-            cipher += chr(letter)
-    return str.encode(cipher)
+    d = {}
+    for c in (65, 97):
+        for i in range(26):
+            d[chr(i + c)] = chr((i + 13) % 26 + c)
+    return str.encode("".join([d.get(chr(c), chr(c)) for c in message]))
 
 
 def crypt_rot47(message):
-    cipher = ''
-    for letter in message:
-        if 126 >= letter >= 33:
-            cipher += chr(33 + ((letter + 14) % 94))
-        else:
-            cipher += chr(message[letter])
-    return str.encode(cipher)
+    d = {}
+    for letter in range(47):
+        d[chr(letter + 33)] = chr((33 + letter) + 47)
+    for letter in range(47, 94):
+        d[chr(letter + 33)] = chr((33 + letter) - 47)
+    return str.encode("".join([d.get(chr(c), chr(c)) for c in message]))
 
 
 def codec_decoder_generator(codec):
@@ -137,7 +129,7 @@ def hex_decoder(match):
         if match[i] not in b'0123456789abcdef':
             match = match[:i]
             break
-    if len(match)%2:
+    if len(match) % 2:
         match = match[:-1]
     return binascii.unhexlify(match)
 
@@ -147,7 +139,7 @@ def hex_bytes_decoder(match):
         if match[i] > 0xf:
             match = match[:i]
             break
-    if len(match)%2:
+    if len(match) % 2:
         match = match[:-1]
     return bytes(match[i] << 4 | match[i+1] for i in range(0, len(match), 2))
 
@@ -161,7 +153,7 @@ def binary_decoder(match):
         if match[i] not in b'01':
             match = match[:i]
             break
-    while len(match)%8:
+    while len(match) % 8:
         match = match[:-1]
     return bitstring_to_bytes(match)
 
@@ -171,7 +163,7 @@ def binary_bytes_decoder(match):
         if match[i] > 1:
             match = match[:i]
             break
-    while len(match)%8:
+    while len(match) % 8:
         match = match[:-1]
     bin_converted = bytes(ord('0')+x for x in match)
     return bitstring_to_bytes(bin_converted)
@@ -185,12 +177,12 @@ def build_automaton(pattern):
 
     # base64 match
     b64pattern = base64.b64encode(pattern).rstrip(b'=')
-    if len(b64pattern)%3:
+    if len(b64pattern) % 3:
         b64pattern = b64pattern[:-1]
     automaton.add_word(b64pattern, (b64pattern, 'base64', b64_decoder))
 
     b32pattern = base64.b32encode(pattern).rstrip(b'=')
-    if len(b32pattern)%7:
+    if len(b32pattern) % 7:
         b32pattern = b32pattern[:-1]
     automaton.add_word(b32pattern, (b32pattern, 'base32', b32_decoder))
 
@@ -203,8 +195,8 @@ def build_automaton(pattern):
 
     # xor match
     for xorval in range(1, 256):
-        xor_pattern = bytes(xorval^x for x in pattern)
-        xor_decoder = lambda s, xorval=xorval: bytes(xorval^x for x in s)
+        xor_pattern = bytes(xorval ^ x for x in pattern)
+        xor_decoder = lambda s, xorval=xorval: bytes(xorval ^ x for x in s)
         automaton.add_word(xor_pattern,
                            (xor_pattern, f'XOR_{xorval}', xor_decoder))
 
