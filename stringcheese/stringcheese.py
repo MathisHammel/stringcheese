@@ -99,16 +99,12 @@ def crypt_rot13(message):
     cipher = ''
     for letter in message:
         if 64 < letter < 91:
-            if chr(letter).isalpha():
-                num = (letter - 64 + 13) % 26
-                cipher += 'Z' if num == 0 else chr(num + 64)
+            num = (letter - 64 + 13) % 26
+            cipher += 'Z' if num == 0 else chr(num + 64)
         elif 96 < letter < 122:
-            if chr(letter).isalpha():
-                num = (letter - 96 + 13) % 26
-                cipher += 'z' if num == 0 else chr(num + 96)
-            else:
-                cipher += chr(letter)
-        else :
+            num = (letter - 96 + 13) % 26
+            cipher += 'z' if num == 0 else chr(num + 96)
+        else:
             cipher += chr(letter)
     return str.encode(cipher)
 
