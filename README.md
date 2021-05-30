@@ -38,6 +38,7 @@ When the encoded flag prefix is found somewhere, the corresponding decoder is ca
 - Anso
 - [Podalirius](https://twitter.com/podalirius_)
 - [Hedroed](https://twitter.com/hedroed)
+- [TheApac](https://twitter.com/TheApac)
 - [You ?](https://github.com/MathisHammel/stringcheese/pulls)
 
 ## Contributing
