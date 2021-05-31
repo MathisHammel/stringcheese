@@ -169,6 +169,21 @@ def binary_bytes_decoder(match):
     return bitstring_to_bytes(bin_converted)
 
 
+def b10_ascii_decoder(match):
+    decoded_ascii = ""
+    acc = bytearray()
+    for l in match:
+        if l < 48 or l > 57:
+            break  # as soon as match is not digits
+        acc.append(l)
+        val = int(acc)
+        # wait to have a big enough number to convert to ascii
+        if val >= 32:  # ascii code bellow 32 are not printable
+            decoded_ascii += chr(val)
+            acc.clear()
+    return decoded_ascii.encode()
+
+
 def build_automaton(pattern):
     automaton = Automaton()
 
@@ -192,6 +207,11 @@ def build_automaton(pattern):
         codec_pattern = pattern.decode().encode(codec)
         codec_decoder = codec_decoder_generator(codec)
         automaton.add_word(codec_pattern, (codec_pattern, codec, codec_decoder))
+
+        # base 10 ascii match
+    b10_ascii_pattern = ''.join(str(x) for x in pattern).encode()
+    automaton.add_word(b10_ascii_pattern,
+                       (b10_ascii_pattern, 'base10_ascii', b10_ascii_decoder))
 
     # xor match
     for xorval in range(1, 256):
