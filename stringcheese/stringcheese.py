@@ -68,6 +68,29 @@ def b64_decoder(match):
 
     return None  # All decodes failed
 
+def b64_urlsafedecoder(match):
+    try:
+        # If padding is present, b64decode ignores leftover data and works
+        return base64.urlsafe_b64decode(match)
+    except:
+        pass
+
+    # Try to find a decodeable base64 string by trimming progressively
+    for trim_len in range(len(match), -1, -1):
+        if trim_len % 4 == 1:
+            continue  # b64 is not compatible with this data length
+        trim_match = match[:trim_len]
+
+        # Add correct padding
+        while len(trim_match) % 4:
+            trim_match += b'='
+
+        try:
+            return base64.urlsafe_b64decode(trim_match)
+        except:
+            pass  # Decode failed. Ignore
+
+    return None  # All decodes failed
 
 def b32_decoder(match):
     try:
@@ -195,6 +218,12 @@ def build_automaton(pattern):
     if len(b64pattern) % 3:
         b64pattern = b64pattern[:-1]
     automaton.add_word(b64pattern, (b64pattern, 'base64', b64_decoder))
+
+    # base64 Url Safe Mode match
+    b64pattern_urlsafe = base64.urlsafe_b64encode(pattern).rstrip(b'=')
+    if len(b64pattern_urlsafe) % 3:
+        b64pattern_urlsafe = b64pattern_urlsafe[:-1]
+    automaton.add_word(b64pattern_urlsafe, (b64pattern_urlsafe, 'base64 urlsafe mode', b64_urlsafedecoder))
 
     b32pattern = base64.b32encode(pattern).rstrip(b'=')
     if len(b32pattern) % 7:
